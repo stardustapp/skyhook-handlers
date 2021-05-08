@@ -1,5 +1,4 @@
-import { HookContext, HookData } from 'https://gist.githubusercontent.com/danopia/06b87be5573543ca6a904bbb9ffe5fbd/raw/a2502babd5fb2443fb4bb9940281a23ad61bff5c/contract.ts';
-// import { HookContext, HookData } from './_lib.ts';
+import { HookContext, HookData } from '../contract.ts';
 
 export async function processHook(
   ctx: HookContext,

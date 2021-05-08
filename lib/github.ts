@@ -1,7 +1,7 @@
 import type * as EventPayloads from 'https://unpkg.com/@octokit/webhooks-types@3.73.1/schema.d.ts';
 // https://github.com/octokit/webhooks/tree/master/payload-examples/api.github.com
 
-import { HookContext, HookData, JSONValue } from 'https://crux.land/4BuXDK';
+import { HookContext, HookData, JSONValue } from '../contract.ts';
 import { resolveFromCheckSuiteApiUrl } from './github-actions.ts';
 
 import moment from 'https://cdn.skypack.dev/moment?dts';
