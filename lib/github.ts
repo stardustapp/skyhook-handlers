@@ -827,12 +827,13 @@ export async function processHook(
   if (eventType === 'repository') {
     const payload = data.payload as EventPayloads.RepositoryEvent;
 
-    const {action, changes, repository, sender} = payload;
+    const {action, repository, sender} = payload;
     if (!isActionRelevant(action)) {
       console.log('Ignoring irrelevant action', action);
       return;
     }
 
+    const {changes} = payload as EventPayloads.RepositoryEditedEvent;
     let changesTxt = '';
     if (changes) {
       changesTxt = Object.keys(changes).map(x => '`'+x+'`').join(', ');
@@ -900,7 +901,7 @@ export async function processHook(
         "\x0315"+payload.sender.login+"\x0F "+
         action+' '+
         "project card: "+
-        ctx.trimText(project_card.note, action == "created" ? 300 : 80));
+        ctx.trimText(project_card.note ?? '(no text)', action == "created" ? 300 : 80));
     return;
 
   } else
