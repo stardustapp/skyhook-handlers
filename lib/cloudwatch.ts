@@ -33,6 +33,7 @@ export async function processHook(
   const channel = data.parameters.get('channel') || '#stardust-noise';
 
   const {Type, MessageId, TopicArn, Subject, Message, Timestamp} = data.payload;
+  if (!Type || !MessageId) ctx.cancelAsUnrecognizable(`Doesn't look like an SNS payload`);
   // also signature and unsub stuff
   switch (Type) {
     case 'SubscriptionConfirmation':

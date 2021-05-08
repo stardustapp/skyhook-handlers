@@ -29,11 +29,11 @@ const commitMsgLengthMap: Record<string,number | undefined> = {
 
 export async function processHook(
   ctx: HookContext,
-  data: HookData<Record<string,JSONValue>>,
+  data: HookData<unknown>,
 ) {
   console.log('github webhook data:', JSON.stringify(data));
   const payload = data.payload as Record<string,JSONValue>;
-  const pushPayload = data.payload as unknown as EventPayloads.PushEvent;
+  const pushPayload = data.payload as EventPayloads.PushEvent;
 
   const eventType = data.headers.get('X-GitHub-Event');
   const hookSource = pushPayload.repository
@@ -100,7 +100,7 @@ export async function processHook(
 
   if (eventType === 'push') {
     // code was pushed
-    const payload = data.payload as EventPayloads.WebhookPayloadPush;
+    const payload = data.payload as EventPayloads.PushEvent;
 
     const noun = (payload.commits.length == 1 ? 'commit' : 'commits');
     const branch = payload.ref.split('/').slice(2).join('/');
@@ -270,7 +270,7 @@ export async function processHook(
   } else
 
   if (eventType === 'issues') {
-    const payload = data.payload as EventPayloads.WebhookPayloadIssues;
+    const payload = data.payload as EventPayloads.IssuesEvent;
 
     const {action} = payload;
     if (!isActionRelevant(action)) {
@@ -278,21 +278,24 @@ export async function processHook(
       return;
     }
 
+    const payloadEdited = payload as EventPayloads.IssuesEditedEvent;
+    const payloadLabeled = payload as EventPayloads.IssuesLabeledEvent;
+
     // try being informative
     var interjection = '';
     switch (true) {
 
-      case !!payload.changes:
+      case !!payloadEdited.changes:
         // <user> changed the body of issue #31...
         interjection = 'the ' +
-          Object.keys(payload.changes!).join(', ') +
+          Object.keys(payloadEdited.changes).join(', ') +
           ' of ';
         break;
 
-      case !!payload.label:
+      case !!payloadLabeled.label:
         // <user> unlabeled help-wanted on issue #31...
         // <user> labeled help-wanted on issue #31...
-        interjection = "\x0306"+payload.label!.name+"\x0F on ";
+        interjection = "\x0306"+payloadLabeled.label!.name+"\x0F on ";
         break;
 
       case payload.action.includes('milestone') && !!payload.issue.milestone:
@@ -313,7 +316,7 @@ export async function processHook(
   } else
 
   if (eventType === 'pull_request') {
-    const payload = data.payload as EventPayloads.Pu;
+    const payload = data.payload as EventPayloads.PullRequestEvent;
 
     let {action, pull_request} = payload;
     if (!isActionRelevant(action)) {
@@ -321,15 +324,18 @@ export async function processHook(
       return;
     }
 
+    const payloadEdited = payload as EventPayloads.PullRequestEditedEvent;
+    const payloadLabeled = payload as EventPayloads.PullRequestLabeledEvent;
+
     // try being informative
     var interjection = '';
     var suffix = '';
     switch (true) {
 
-      case !!payload.changes:
+      case !!payloadEdited.changes:
         // <user> changed the body of PR #31...
         interjection = 'the ' +
-          Object.keys(payload.changes).join(', ') +
+          Object.keys(payloadEdited.changes).join(', ') +
           ' of ';
         break;
 
@@ -356,10 +362,10 @@ export async function processHook(
         suffix = " into \x0306"+pull_request.base.ref+"\x0F";
         break;
 
-      case !!payload.label:
+      case !!payloadLabeled.label:
         // <user> unlabeled help-wanted on PR #31...
         // <user> labeled help-wanted on PR #31...
-        interjection = "\x0306"+payload.label!.name+"\x0F on ";
+        interjection = "\x0306"+payloadLabeled.label!.name+"\x0F on ";
         break;
 
       case payload.action.includes('milestone') && !!pull_request.milestone:
@@ -381,7 +387,7 @@ export async function processHook(
   } else
 
   if (eventType === 'milestone') {
-    const payload = data.payload as EventPayloads.WebhookPayloadMilestone;
+    const payload = data.payload as EventPayloads.MilestoneEvent;
 
     const {milestone, action, sender, repository} = payload;
     if (!isActionRelevant(action)) {
@@ -389,20 +395,21 @@ export async function processHook(
       return;
     }
 
+    let dueOn = milestone.due_on ? `, due on \x02${moment.utc(milestone.due_on).calendar()}\x02` : '';
+
     ctx.notify(channel,
         "[\x0313"+repository.name+"\x0F] "+
         "\x0315"+sender.login+"\x0F "+
         action+" milestone "+
-        "\x0306"+milestone.title +"\x0F, "+
-        "due on \x02"+moment.utc(milestone.due_on).calendar()+"\x02: "+
-        ctx.trimText(milestone.description, 140)+"\x0F "+
+        "\x0306"+milestone.title +"\x0F"+dueOn+": "+
+        ctx.trimText(milestone.description ?? '(no description)', 140)+"\x0F "+
         "\x0302\x1F"+await urlHandler(milestone.html_url)+"\x0F");
     return;
 
   } else
 
   if (eventType === 'label') {
-    const payload = data.payload as EventPayloads.WebhookPayloadLabel;
+    const payload = data.payload as EventPayloads.LabelEvent;
 
     const {label, action, sender, repository} = payload;
     if (!isActionRelevant(action)) {
@@ -410,14 +417,16 @@ export async function processHook(
       return;
     }
 
+    const payloadEdited = payload as EventPayloads.LabelEditedEvent;
+
     // name changes are special
-    if (payload.changes && payload.changes.name) {
+    if (payloadEdited.changes && payloadEdited.changes.name) {
       // <user> renamed label needs:one to needs:two
       ctx.notify(channel,
           "[\x0313"+repository.name+"\x0F] "+
           "\x0315"+sender.login+"\x0F "+
           "renamed label "+
-          "\x0306"+payload.changes.name.from +"\x0F "+
+          "\x0306"+payloadEdited.changes.name.from +"\x0F "+
           "to \x0306"+label.name +"\x0F");
       return;
     }
@@ -433,7 +442,7 @@ export async function processHook(
   } else
 
   if (eventType === 'commit_comment') {
-    const payload = data.payload as EventPayloads.WebhookPayloadCommitComment;
+    const payload = data.payload as EventPayloads.CommitCommentEvent;
 
     const {action, repository, sender, comment} = payload;
     if (!isActionRelevant(action)) {
@@ -466,7 +475,7 @@ export async function processHook(
   } else
 
   if (eventType === 'issue_comment') {
-    const payload = data.payload as EventPayloads.WebhookPayloadIssueComment;
+    const payload = data.payload as EventPayloads.IssueCommentEvent;
 
     const {action, repository, sender, issue, comment} = payload;
     if (!isActionRelevant(action)) {
@@ -501,7 +510,7 @@ export async function processHook(
   } else
 
   if (eventType === 'pull_request_review') {
-    const payload = data.payload as EventPayloads.WebhookPayloadPullRequestReview;
+    const payload = data.payload as EventPayloads.PullRequestReviewEvent;
 
     const {action, repository, sender, pull_request, review} = payload;
     if (!isActionRelevant(action)) {
@@ -527,7 +536,7 @@ export async function processHook(
   } else
 
   if (eventType === 'pull_request_review_comment') {
-    const payload = data.payload as EventPayloads.WebhookPayloadPullRequestReviewComment;
+    const payload = data.payload as EventPayloads.PullRequestReviewCommentEvent;
 
     const {action, repository, sender, pull_request, comment} = payload;
     if (!isActionRelevant(action)) {
@@ -558,7 +567,7 @@ export async function processHook(
   } else
 
   if (eventType === 'gollum') {
-    const payload = data.payload as EventPayloads.WebhookPayloadGollum;
+    const payload = data.payload as EventPayloads.GollumEvent;
 
     const {pages, repository, sender} = payload;
     const relPages = pages.filter(p =>
@@ -582,7 +591,7 @@ export async function processHook(
 
   // TODO: what's appropriate here?
   if (eventType === 'check_run') {
-    const payload = data.payload as EventPayloads.WebhookPayloadCheckRun;
+    const payload = data.payload as EventPayloads.CheckRunEvent;
 
     const {action, check_run, repository} = payload;
     const {id, node_id, external_id, head_sha, html_url, status, conclusion, started_at, completed_at, output, name, check_suite} = check_run;
@@ -591,7 +600,7 @@ export async function processHook(
   } else
 
   if (eventType === 'check_suite') {
-    const payload = data.payload as EventPayloads.WebhookPayloadCheckSuite;
+    const payload = data.payload as EventPayloads.CheckSuiteEvent;
 
     const {action, check_suite, repository} = payload;
     const {id, node_id, head_branch, head_sha, status, conclusion, url, before, after, pull_requests, app, created_at, updated_at, latest_check_runs_count, head_commit} = check_suite;
@@ -633,7 +642,7 @@ export async function processHook(
       : `${Math.floor(totalSeconds)} seconds`;
 
     // some colors
-    var stateFrag = conclusion;
+    let stateFrag: string | null = conclusion;
     if (conclusion === 'failure') stateFrag = `\x0304${'failed'}\x0F`;
     else if (conclusion === 'success') stateFrag = `\x0303${'passed'}\x0F`;
     // else if (conclusion === 'action_required') stateFrag = `\x0315${conclusion}\x0F`;
@@ -649,7 +658,7 @@ export async function processHook(
   } else
 
   if (eventType === 'status' || eventType === 'deployment' || eventType === 'deployment_status' || eventType === 'page_build') {
-    const payload = data.payload as EventPayloads.WebhookPayloadStatus | EventPayloads.WebhookPayloadDeployment | EventPayloads.WebhookPayloadDeploymentStatus | EventPayloads.WebhookPayloadPageBuild;
+    const payload = data.payload as EventPayloads.StatusEvent | EventPayloads.DeploymentEvent | EventPayloads.DeploymentStatusEvent | EventPayloads.PageBuildEvent;
 
     const {repository} = payload;
     let commit: {sha: string};
@@ -660,7 +669,7 @@ export async function processHook(
 
     // adapt deployments to look like normal statuses
     if (eventType === 'status') {
-      const status = payload as EventPayloads.WebhookPayloadStatus;
+      const status = payload as EventPayloads.StatusEvent;
       state = status.state;
       commit = status.commit;
       context = status.context;
@@ -668,22 +677,23 @@ export async function processHook(
       description = status.description;
     } else
     if (eventType === 'deployment') {
-      const {deployment} = payload as EventPayloads.WebhookPayloadDeployment;
+      const {deployment} = payload as EventPayloads.DeploymentEvent;
       state = 'info';
       commit = deployment; // for sha
       context = 'deployment';
       description = deployment.task+' '+deployment.environment;
     } else
     if (eventType === 'deployment_status') {
-      const {deployment, deployment_status} = payload as EventPayloads.WebhookPayloadDeploymentStatus;
-      state = deployment_status.status;
+      const {deployment, deployment_status} = payload as EventPayloads.DeploymentStatusEvent;
+      // state = deployment_status.status;
+      state = deployment_status.state;
       commit = deployment; // for sha
       context = 'deployment status';
       target_url = deployment_status.target_url;
       description = deployment.task+' '+deployment.environment;
     } else
     if (eventType === 'page_build') {
-      const {build} = payload as EventPayloads.WebhookPayloadPageBuild;
+      const {build} = payload as EventPayloads.PageBuildEvent;
       state = build.status;
       commit = {sha: build.commit};
       context = 'page';
@@ -725,7 +735,7 @@ export async function processHook(
   } else
 
   if (eventType === 'watch') {
-    const payload = data.payload as EventPayloads.WebhookPayloadWatch;
+    const payload = data.payload as EventPayloads.WatchEvent;
 
     if ('stars' in data.parameters) {
       console.log('Ignoring legacy star event due to "stars" param');
@@ -740,7 +750,7 @@ export async function processHook(
   } else
 
   if (eventType === 'star') {
-    const payload = data.payload as EventPayloads.WebhookPayloadStar;
+    const payload = data.payload as EventPayloads.StarEvent;
 
     if (payload.action === 'created') {
       ctx.notify(channel,
@@ -758,7 +768,7 @@ export async function processHook(
   } else
 
   if (eventType === 'member') {
-    const payload = data.payload as EventPayloads.WebhookPayloadMember;
+    const payload = data.payload as EventPayloads.MemberEvent;
 
     const {action} = payload;
     if (!isActionRelevant(action)) {
@@ -782,7 +792,7 @@ export async function processHook(
   } else
 
   if (eventType === 'fork') {
-    const payload = data.payload as EventPayloads.WebhookPayloadFork;
+    const payload = data.payload as EventPayloads.ForkEvent;
 
     ctx.notify(channel,
         "[\x0313"+payload.repository.name+"\x0F] "+
@@ -794,7 +804,7 @@ export async function processHook(
   } else
 
   if (eventType === 'create' || eventType === 'delete') {
-    const payload = data.payload as EventPayloads.WebhookPayloadCreate | EventPayloads.WebhookPayloadDelete;
+    const payload = data.payload as EventPayloads.CreateEvent | EventPayloads.DeleteEvent;
 
     const {ref, ref_type, repository, sender} = payload;
 
@@ -815,7 +825,7 @@ export async function processHook(
   } else
 
   if (eventType === 'repository') {
-    const payload = data.payload as EventPayloads.WebhookPayloadRepository;
+    const payload = data.payload as EventPayloads.RepositoryEvent;
 
     const {action, changes, repository, sender} = payload;
     if (!isActionRelevant(action)) {
@@ -837,7 +847,7 @@ export async function processHook(
   } else
 
   if (eventType === 'repository_vulnerability_alert') {
-    const payload = data.payload as EventPayloads.WebhookPayloadRepositoryVulnerabilityAlert;
+    const payload = data.payload as EventPayloads.RepositoryVulnerabilityAlertEvent;
 
     const {action, repository, alert} = payload;
     if (action !== 'create') {
@@ -859,7 +869,7 @@ export async function processHook(
   } else
 
   if (eventType === 'project_column') {
-    const payload = data.payload as EventPayloads.WebhookPayloadProjectColumn;
+    const payload = data.payload as EventPayloads.ProjectColumnEvent;
 
     const {action, project_column} = payload;
     if (!isActionRelevant(action)) {
@@ -877,7 +887,7 @@ export async function processHook(
   } else
 
   if (eventType === 'project_card') {
-    const payload = data.payload as EventPayloads.WebhookPayloadProjectCard;
+    const payload = data.payload as EventPayloads.ProjectCardEvent;
 
     const {action, project_card} = payload;
     if (!isActionRelevant(action)) {
@@ -896,7 +906,7 @@ export async function processHook(
   } else
 
   if (eventType === 'project') {
-    const payload = data.payload as EventPayloads.WebhookPayloadProject;
+    const payload = data.payload as EventPayloads.ProjectEvent;
 
     const {action, project} = payload;
     if (!isActionRelevant(action)) {
@@ -915,21 +925,21 @@ export async function processHook(
   } else
 
   if (eventType === 'ping') {
-    const payload = data.payload as EventPayloads.WebhookPayloadPing;
+    const payload = data.payload as EventPayloads.PingEvent;
 
     const pingUrl = payload.hook.type === 'Organization'
-      ? `https://github.com/${payload.organization.login}`
-      : payload.repository.html_url;
+      ? `https://github.com/${payload.organization?.login}`
+      : payload.repository?.html_url;
     ctx.notify(channel, "[\x0313"+hookSource+"\x0F] "+
         "This GitHub hook is working! Received a `ping` event. "+
         payload.zen + ' '+
-        "\x0302\x1F"+await urlHandler(pingUrl)+"\x0F");
+        "\x0302\x1F"+await urlHandler(pingUrl || payload.hook.url)+"\x0F");
     return;
 
   } else
 
   if (eventType === 'meta') {
-    const payload = data.payload as EventPayloads.WebhookPayloadMeta;
+    const payload = data.payload as EventPayloads.MetaEvent;
 
     ctx.notify(channel, "[\x0313"+hookSource+"\x0F] "+
         "Looks like this GitHub webhook was "+
@@ -937,10 +947,6 @@ export async function processHook(
     return;
   }
 
-  const speciman = await storeSpeciman(`github/${eventType}`, data);
-
-  console.log('got weird message', JSON.stringify(data));
-  ctx.notify(channel, "[\x0313"+hookSource+"\x0F] "+
-         "Got Github event of unhandled type: " + eventType);
-  ctx.notify('#stardust-noise', `Got Github event for ${channel} of unhandled type "${eventType}": ${speciman}`);
+  // const speciman = await storeSpeciman(`github/${eventType}`, data);
+  ctx.cancelAsUnrecognizable(`Got Github event for ${channel} of unhandled type "${eventType}"`);
 }
