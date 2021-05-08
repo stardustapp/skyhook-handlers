@@ -1,8 +1,7 @@
-import { FunctionDevice } from "./deps.ts";
-// this actually sets up deno deploy, so only import specifically in this file
 import {
-  PublicEnvironment,
-} from "https://uber.danopia.net/deno/dust@v1beta1/skylink/src/server-deno-deploy.ts";
+  FetchListener, PublicEnvironment,
+  FunctionDevice,
+} from "./deps.ts";
 
 import * as handlers from './handlers.ts';
 import { HookCtx } from "./context.ts";
@@ -37,3 +36,5 @@ PublicEnvironment.bind('/process%20hook', new FunctionDevice(async input => {
 
   return ctx.toResultEntry();
 }));
+
+addEventListener("fetch", FetchListener);
