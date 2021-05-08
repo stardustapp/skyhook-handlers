@@ -1,4 +1,4 @@
-import { filesize } from "https://cloudydeno.github.io/deno-bitesized/formatting/filesize@v1.ts";
+import { filesize } from "../deps.ts";
 import moment from 'https://cdn.skypack.dev/moment?dts';
 import 'https://cdn.skypack.dev/moment-timezone';
 
