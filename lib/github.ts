@@ -7,8 +7,6 @@ import { resolveFromCheckSuiteApiUrl } from './github-actions.ts';
 import moment from 'https://cdn.skypack.dev/moment?dts';
 import multimatch from 'https://cdn.skypack.dev/multimatch?dts';
 
-const sleep = (ms: number) => new Promise(ok => setTimeout(ok, ms));
-
 const orgChannelMap: Record<string,string | undefined> = {
   'stardustapp': '#stardust',
   'danopia': '#stardust',
@@ -258,7 +256,6 @@ export async function processHook(
         committerName = " \x0315"+commit.committer.name+"\x0F";
       }
 
-      await sleep(900);
       ctx.notify(channel,
           " \x0313"+payload.repository.name+"\x0F/"+
           "\x0306"+branch+"\x0F "+
