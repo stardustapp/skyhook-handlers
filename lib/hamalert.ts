@@ -5,15 +5,16 @@ export async function processHook(
 ) {
 
     const {
-        fullCallsign,
-        frequency,
-        band,
-        mode,
-        modeDetail,
-        spotter,
-        snr,
-        comment,
-        source,
+      fullCallsign,
+      frequency,
+      band,
+      mode,
+      modeDetail,
+      spotter,
+      spotterContinent,
+      snr,
+      comment,
+      source,
     } = data.payload;
 
   var channel = data.parameters.get('channel');
@@ -30,7 +31,10 @@ export async function processHook(
   }
   out += "\x0F] ";
   out += "\x0306" + fullCallsign + "\x0F ";
-  out += "spotted by \x0308" + spotter + "\x0F ";
+  out += "spotted by \x0305" + spotter + "\x0F ";
+  if (spotterContinent) {
+    out += "in \x0310" + spotterContinent + "\x0F ";
+  }
   out += "\x0302" + mode;
   if (modeDetail && modeDetail != mode) {
     out += ' (' + modeDetail + ')';
@@ -40,7 +44,7 @@ export async function processHook(
   if (snr) {
     out += ', ' + snr + 'dB';
   }
-  out += "\0xF)";
+  out += "\x0F)";
   if (comment) {
     out += "\x0304" + comment + "\x0F";
   }
