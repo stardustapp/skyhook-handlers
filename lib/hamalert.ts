@@ -30,11 +30,11 @@ export async function processHook(
     out += '/' + source;
   }
   out += "\x0F] ";
-  out += "\x0306" + fullCallsign + "\x0F ";
-  out += "spotted by \x0305" + spotter + "\x0F ";
+  out += "\x0306" + spotter + "\x0F ";
   if (spotterContinent) {
-    out += "in \x0310" + spotterContinent + "\x0F ";
+    out += "in \x0309" + spotterContinent + "\x0F ";
   }
+  out += "spotted \x0305" + fullCallsign + "\x0F ";
   out += "\x0302" + mode;
   if (modeDetail && modeDetail != mode) {
     out += ' (' + modeDetail + ')';
