@@ -10,6 +10,7 @@ export async function processHook(
       band,
       mode,
       modeDetail,
+      speed,
       spotter,
       spotterContinent,
       snr,
@@ -35,7 +36,11 @@ export async function processHook(
     out += "in \x0309" + spotterContinent + "\x0F ";
   }
   out += "spotted \x0305" + fullCallsign + "\x0F ";
-  out += "using \x0302" + mode;
+  out += "using \x0302";
+  if (speed) {
+    out += speed + 'wpm ';
+  }
+  out += mode;
   if (modeDetail && modeDetail != mode) {
     out += ' (' + modeDetail + ')';
   }
