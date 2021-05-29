@@ -35,7 +35,7 @@ export async function processHook(
     out += "in \x0309" + spotterContinent + "\x0F ";
   }
   out += "spotted \x0305" + fullCallsign + "\x0F ";
-  out += "\x0302" + mode;
+  out += "using \x0302" + mode;
   if (modeDetail && modeDetail != mode) {
     out += ' (' + modeDetail + ')';
   }
