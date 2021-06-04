@@ -3,6 +3,7 @@ export { processHook as cloudwatch } from "./lib/cloudwatch.ts";
 export { processHook as github } from "./lib/github.ts";
 // export { processHook as gitlab } from "./lib/gitlab.ts";
 export { processHook as grafana } from "./lib/grafana.ts";
+export { processHook as hamalert } from "./lib/hamalert.ts";
 export { processHook as mailgun } from "./lib/mailgun.ts";
 export { processHook as ombi } from "./lib/ombi.ts";
 export { processHook as radarr } from "./lib/radarr.ts";
